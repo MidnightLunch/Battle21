@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle 21 - Playing Field</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: 1fr 3fr 1fr;
+            gap: 10px;
+            width: 80%;
+            margin: 20px auto;
+            background-color: white;
+            padding: 20px;
+            border: 2px solid black;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .hand {
+            width: 80%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border: 2px solid black;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            min-height: 150px;
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid black;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            position: relative;
+        }
+        .field {
+            grid-column: 2 / span 1;
+            height: 150px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-content: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        .deck, .graveyard {
+            width: 100px;
+            height: 150px;
+        }
+        .deck img {
+            width: 80px;
+            height: 120px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .deck img:hover {
+            transform: translateY(-5px);
+        }
+        .hand img {
+            width: 80px;
+            height: 120px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .hand img:hover {
+            transform: translateY(-10px);
+        }
+        .field-card {
+            width: 60px;
+            height: 90px;
+            margin: 2px;
+        }
+        .graveyard-card {
+            width: 60px;
+            height: 90px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #game-log {
+            height: 100px;
+            overflow-y: auto;
+            text-align: left;
+            padding: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #turn-indicator {
+            font-weight: bold;
+            font-size: 18px;
+            color: #00a;
+            padding: 5px 15px;
+            background-color: #f8f8f8;
+            border-radius: 15px;
+            margin: 0 10px;
+        }
+        .counter {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background-color: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .target-overlay {
+            position: absolute;
+            background-color: rgba(0, 255, 0, 0.3);
+            border: 2px solid green;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            border-radius: 5px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .game-info {
+            width: 80%;
+            margin: 20px auto;
+            display: flex;
+            justify-content: space-between;
+            background-color: white;
+            padding: 10px;
+            border: 2px solid black;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .info-row {
+            display: flex;
+            gap: 10px;
+        }
+        .info-item {
+            padding: 5px;
+        }
+        .hp-display {
+            font-weight: bold;
+            color: #f44336;
+        }
+        #game-log div {
+            padding: 2px 0;
+            border-bottom: 1px solid #eee;
+        }
+        #game-log div:last-child {
+            border-bottom: none;
+            font-weight: bold;
+        }
+        .hand-full-warning {
+            color: #f44336;
+            font-weight: bold;
+            display: none;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Battle 21 Card Game</h1>
+    
+    <!-- Game info display -->
+    <div class="game-info">
+        <div class="player-info">
+            <strong>AI</strong>
+            <div class="info-row">
+                <div class="info-item">HP: <span id="ai-hp" class="hp-display">0</span></div>
+                <div class="info-item">Deck: <span id="ai-deck-count">26</span></div>
+            </div>
+        </div>
+        <div id="turn-indicator">Your Turn</div>
+        <div class="player-info">
+            <strong>You</strong>
+            <div class="info-row">
+                <div class="info-item">HP: <span id="player-hp" class="hp-display">0</span></div>
+                <div class="info-item">Deck: <span id="player-deck-count">26</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <h2>AI's Side</h2>
+    <div class="board">
+        <div class="section deck">
+            <div class="section-title">DECK</div>
+            <img src="cards/playing_card_back.png" id="ai-deck">
+            <div class="counter" id="ai-deck-counter">26</div>
+        </div>
+        <div class="section field" id="ai-field">
+            <div class="section-title">FIELD</div>
+        </div>
+        <div class="section graveyard" id="ai-graveyard">
+            <div class="section-title">GRAVEYARD</div>
+        </div>
+    </div>
+    
+    <h2>Player's Side</h2>
+    <div class="board">
+        <div class="section graveyard" id="player-graveyard">
+            <div class="section-title">GRAVEYARD</div>
+        </div>
+        <div class="section field" id="player-field">
+            <div class="section-title">FIELD</div>
+        </div>
+        <div class="section deck">
+            <div class="section-title">DECK</div>
+            <img src="cards/playing_card_back.png" id="player-deck">
+            <div class="counter" id="player-deck-counter">26</div>
+        </div>
+    </div>
+    
+    <div class="hand" id="player-hand">
+        <div class="section-title">YOUR HAND</div>
+    </div>
+    <div class="hand-full-warning" id="hand-full-warning">Your hand is full (maximum 5 cards)!</div>
+    
+    <!-- Game controls -->
+    <div style="width: 80%; margin: 20px auto; display: flex; justify-content: center; gap: 20px;">
+        <button id="end-turn-btn">End Turn</button>
+        <button id="pass-btn">Pass</button>
+    </div>
+    
+    <!-- Game log -->
+    <div style="width: 80%; height: 150px; margin: 20px auto; background-color: white; border: 2px solid black; overflow-y: scroll; padding: 10px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h3>Game Log</h3>
+        <div id="game-log"></div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            playerDeck: [],
+            aiDeck: [],
+            playerHand: [],
+            aiHand: [],
+            playerField: [],
+            aiField: [],
+            playerGraveyard: [],
+            aiGraveyard: [],
+            playerHitPoints: 0,
+            aiHitPoints: 0,
+            currentTurn: 'player', // 'player' or 'ai'
+            actionTaken: false,
+            abilityUsed: false
+        };
+
+        // Initialize full deck as card objects instead of image paths
+        function initializeFullDeck() {
+            const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+            const values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]; // 11=J, 12=Q, 13=K, 14=A
+            
+            let deck = [];
+            
+            // Add number and face cards
+            for (let suit of suits) {
+                for (let value of values) {
+                    let cardName;
+                    if (value === 11) cardName = "jack";
+                    else if (value === 12) cardName = "queen";
+                    else if (value === 13) cardName = "king";
+                    else if (value === 14) cardName = "ace";
+                    else cardName = value;
+                    
+                    const imgPath = `cards/${cardName}_of_${suit}.png`;
+                    
+                    const special = value === 14 ? 'swap' : null;
+                    
+                    deck.push({
+                        value: value,
+                        suit: suit,
+                        img: imgPath,
+                        special: special
+                    });
+                }
+            }
+            
+            // Add jokers
+            deck.push({
+                value: 15,
+                suit: 'joker',
+                img: "cards/red_joker.png",
+                special: 'discard'
+            });
+            
+            deck.push({
+                value: 15,
+                suit: 'joker',
+                img: "cards/black_joker.png",
+                special: 'discard'
+            });
+            
+            return deck;
+        }
+
+        // Start the game
+        function initGame() {
+            // Get full deck and shuffle
+            const fullDeck = initializeFullDeck();
+            shuffleDeck(fullDeck);
+            
+            // Split deck between players
+            gameState.playerDeck = fullDeck.slice(0, 26);
+            gameState.aiDeck = fullDeck.slice(26);
+            
+            // Draw initial hands
+            for (let i = 0; i < 3; i++) {
+                drawCardToHand('player');
+                drawCardToHand('ai');
+            }
+            
+            // Update UI
+            updateGameUI();
+            
+            // Add log message
+            addLogMessage("Game started! Your turn.");
+            
+            // Set up event listeners
+            setupEventListeners();
+        }
+
+        // Shuffle deck using Fisher-Yates algorithm
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        // Draw a card from deck to hand
+        function drawCardToHand(player) {
+            const deck = player === 'player' ? gameState.playerDeck : gameState.aiDeck;
+            const hand = player === 'player' ? gameState.playerHand : gameState.aiHand;
+            
+            if (deck.length === 0) {
+                addLogMessage(`${player === 'player' ? 'Your' : 'AI\'s'} deck is empty!`);
+                checkWinCondition();
+                return false;
+            }
+            
+            // Check hand size limit (max 5 cards)
+            if (hand.length >= 5) {
+                if (player === 'player') {
+                    document.getElementById('hand-full-warning').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('hand-full-warning').style.display = 'none';
+                    }, 3000);
+                    addLogMessage("Your hand is full (maximum 5 cards)!");
+                }
+                return false;
+            }
+            
+            const card = deck.pop();
+            hand.push(card);
+            
+            return card;
+        }
+
+        // Play a card from hand to field
+        function playCard(player, cardIndex, targetField) {
+            const hand = player === 'player' ? gameState.playerHand : gameState.aiHand;
+            const card = hand[cardIndex];
+            
+            // Check if this is a valid play
+            if (!isValidPlay(player, card, targetField)) {
+                return false;
+            }
+            
+            // Remove card from hand
+            hand.splice(cardIndex, 1);
+            
+            // Handle different card types
+            handleCardEffect(player, card, targetField);
+            
+            // Update UI
+            updateGameUI();
+            
+            // Check win condition
+            checkWinCondition();
+            
+            return true;
+        }
+
+        // Check if card play is valid
+        function isValidPlay(player, card, targetField) {
+            // Check if it's player's turn
+            if (gameState.currentTurn !== player) {
+                addLogMessage("It's not your turn!");
+                return false;
+            }
+            
+            // For hearts (attack cards)
+            if (card.suit === 'hearts') {
+                if (gameState.actionTaken) {
+                    addLogMessage("You already played a damage card this turn!");
+                    return false;
+                }
+                gameState.actionTaken = true;
+                return true;
+            }
+            
+            // For clubs (defense cards)
+            if (card.suit === 'clubs') {
+                if (gameState.actionTaken) {
+                    addLogMessage("You already played a card this turn!");
+                    return false;
+                }
+                gameState.actionTaken = true;
+                return true;
+            }
+            
+            // For ability cards (diamonds, spades)
+            if (card.suit === 'diamonds' || card.suit === 'spades') {
+                if (gameState.abilityUsed) {
+                    addLogMessage("You already used an ability this turn!");
+                    return false;
+                }
+                gameState.abilityUsed = true;
+                return true;
+            }
+            
+            // For special cards (aces, jokers)
+            if (card.special) {
+                if (gameState.abilityUsed) {
+                    addLogMessage("You already used an ability this turn!");
+                    return false;
+                }
+                gameState.abilityUsed = true;
+                return true;
+            }
+            
+            return false;
+        }
+		
+
+        // Handle card effects based on type
+        function handleCardEffect(player, card, targetField) {
+            const opponent = player === 'player' ? 'ai' : 'player';
+            
+            // Hearts (attack)
+            if (card.suit === 'hearts') {
+                // Check if opponent has defense (clubs)
+                const opponentField = opponent === 'player' ? gameState.playerField : gameState.aiField;
+                let damageToApply = card.value;
+                let blocked = false;
+                
+                // Try to block with clubs
+                for (let i = 0; i < opponentField.length; i++) {
+                    if (opponentField[i].suit === 'clubs') {
+                        if (opponentField[i].value >= card.value) {
+                            // Full block
+                            addLogMessage(`${card.value} of Hearts was blocked by ${opponentField[i].value} of Clubs!`);
+                            blocked = true;
+                            break;
+                        } else {
+                            // Partial block
+                            damageToApply -= opponentField[i].value;
+                            addLogMessage(`${opponentField[i].value} of Clubs blocked ${opponentField[i].value} damage!`);
+                            
+                            // Remove the club that was used to block
+                            const usedClub = opponentField.splice(i, 1)[0];
+                            
+                            // Move to graveyard
+                            const opponentGraveyard = opponent === 'player' ? gameState.playerGraveyard : gameState.aiGraveyard;
+                            opponentGraveyard.push(usedClub);
+                            
+                            break;
+                        }
+                    }
+                }
+                
+                // Apply remaining damage if not fully blocked
+                if (!blocked && damageToApply > 0) {
+                    if (opponent === 'player') {
+                        gameState.playerHitPoints += damageToApply;
+                        addLogMessage(`You took ${damageToApply} damage! Total: ${gameState.playerHitPoints}`);
+                    } else {
+                        gameState.aiHitPoints += damageToApply;
+                        addLogMessage(`AI took ${damageToApply} damage! Total: ${gameState.aiHitPoints}`);
+                    }
+                    
+                    // Add card to field
+                    const targetFieldArray = targetField === 'player' ? gameState.playerField : gameState.aiField;
+                    targetFieldArray.push(card);
+                }
+            }
+            
+            // Clubs (defense)
+            else if (card.suit === 'clubs') {
+                // Add to player's field as defense
+                const field = player === 'player' ? gameState.playerField : gameState.aiField;
+                field.push(card);
+                addLogMessage(`${player === 'player' ? 'You' : 'AI'} played ${card.value} of Clubs as defense!`);
+            }
+            
+            // Diamonds (purchase)
+            else if (card.suit === 'diamonds') {
+                // Move diamond to graveyard
+                const graveyard = player === 'player' ? gameState.playerGraveyard : gameState.aiGraveyard;
+                graveyard.push(card);
+                
+                // For player, targetField is handled by UI interaction
+                // For AI, simple logic to take highest value card
+                if (player === 'ai') {
+                    const playerField = gameState.playerField;
+                    if (playerField.length > 0) {
+                        // Find highest value card AI can purchase with this diamond
+                        let highestValueCard = null;
+                        let highestValueIndex = -1;
+                        
+                        for (let i = 0; i < playerField.length; i++) {
+                            if (card.value >= playerField[i].value) {
+                                if (highestValueCard === null || playerField[i].value > highestValueCard.value) {
+                                    highestValueCard = playerField[i];
+                                    highestValueIndex = i;
+                                }
+                            }
+                        }
+                        
+                        if (highestValueIndex >= 0) {
+                            // Purchase the card
+                            const purchasedCard = playerField.splice(highestValueIndex, 1)[0];
+                            gameState.aiHand.push(purchasedCard);
+                            addLogMessage(`AI used ${card.value} of Diamonds to purchase ${purchasedCard.value} of ${purchasedCard.suit}!`);
+                        } else {
+                            addLogMessage(`AI used ${card.value} of Diamonds but couldn't purchase any cards!`);
+                        }
+                    } else {
+                        addLogMessage(`AI used ${card.value} of Diamonds but there were no cards to purchase!`);
+                    }
+                }
+            }
+            
+            // Spades (recovery)
+            else if (card.suit === 'spades') {
+                // Move spade to graveyard
+                const graveyard = player === 'player' ? gameState.playerGraveyard : gameState.aiGraveyard;
+                graveyard.push(card);
+                
+                // For player, recovery is handled by UI interaction
+                // For AI, simple logic to recover highest value card
+                if (player === 'ai') {
+                    const aiGraveyard = gameState.aiGraveyard;
+                    if (aiGraveyard.length > 0) {
+                        // Find highest value card AI can recover with this spade
+                        let highestValueCard = null;
+                        let highestValueIndex = -1;
+                        
+                        for (let i = 0; i < aiGraveyard.length; i++) {
+                            // Skip the spade we just used
+                            if (aiGraveyard[i] === card) continue;
+                            
+                            if (card.value >= aiGraveyard[i].value) {
+                                if (highestValueCard === null || aiGraveyard[i].value > highestValueCard.value) {
+                                    highestValueCard = aiGraveyard[i];
+                                    highestValueIndex = i;
+                                }
+                            }
+                        }
+                        
+                        if (highestValueIndex >= 0) {
+                            // Recover the card
+                            const recoveredCard = aiGraveyard.splice(highestValueIndex, 1)[0];
+                            gameState.aiHand.push(recoveredCard);
+                            addLogMessage(`AI used ${card.value} of Spades to recover ${recoveredCard.value} of ${recoveredCard.suit}!`);
+                        } else {
+                            addLogMessage(`AI used ${card.value} of Spades but couldn't recover any cards!`);
+                        }
+                    } else {
+                        addLogMessage(`AI used ${card.value} of Spades but there were no cards to recover!`);
+                    }
+                }
+            }
+            
+            // Special cards
+            else if (card.special) {
+                if (card.special === 'swap') {
+                    // Ace - swap fields
+                    const tempField = [...gameState.playerField];
+                    gameState.playerField = [...gameState.aiField];
+                    gameState.aiField = tempField;
+                    
+                    addLogMessage(`${player === 'player' ? 'You' : 'AI'} used Ace to swap fields!`);
+                }
+                else if (card.special === 'discard') {
+                    // Joker - force opponent to discard hand
+                    if (opponent === 'player') {
+                        // Move all cards from player hand to graveyard
+                        gameState.playerGraveyard = [...gameState.playerGraveyard, ...gameState.playerHand];
+                        gameState.playerHand = [];
+                    } else {
+                        // Move all cards from AI hand to graveyard
+                        gameState.aiGraveyard = [...gameState.aiGraveyard, ...gameState.aiHand];
+                        gameState.aiHand = [];
+                    }
+                    
+                    addLogMessage(`${player === 'player' ? 'You' : 'AI'} used Joker to discard opponent's hand!`);
+                }
+                
+                // Move special card to graveyard
+                const graveyard = player === 'player' ? gameState.playerGraveyard : gameState.aiGraveyard;
+                graveyard.push(card);
+            }
+        }
+
+        // End current turn and start next turn
+        function endTurn() {
+            // Reset turn flags
+            gameState.actionTaken = false;
+            gameState.abilityUsed = false;
+            
+            // Switch turns
+            gameState.currentTurn = gameState.currentTurn === 'player' ? 'ai' : 'player';
+            
+            // Draw card for new turn
+            if (gameState.currentTurn === 'player') {
+                const card = drawCardToHand('player');
+                if (card) {
+                    addLogMessage(`Your turn! Drew a card.`);
+                } else if (gameState.playerHand.length >= 5) {
+                    addLogMessage(`Your turn! Hand is full.`);
+                }
+            } else {
+                const card = drawCardToHand('ai');
+                if (card) {
+                    addLogMessage(`AI's turn! AI drew a card.`);
+                } else if (gameState.aiHand.length >= 5) {
+                    addLogMessage(`AI's turn! AI's hand is full.`);
+                }
+                
+                // AI takes its turn
+                setTimeout(playAITurn, 1000);
+            }
+            
+            // Update UI
+            updateGameUI();
+        }
+
+        // Simple AI turn logic
+        function playAITurn() {
+            // AI will try to play cards in this priority:
+            // 1. Heart (attack) if available
+            // 2. Club (defense) if available
+            // 3. Special cards (Ace, Joker) if advantageous
+            // 4. Ability card if has valid target
+            // 5. Pass if nothing playable
+            
+            let played = false;
+            
+            // Try to play a heart (attack)
+            for (let i = 0; i < gameState.aiHand.length; i++) {
+                if (gameState.aiHand[i].suit === 'hearts') {
+                    playCard('ai', i, 'player');
+                    played = true;
+                    break;
+                }
+            }
+            
+            // Try to play a club (defense)
+            if (!gameState.actionTaken) {
+                for (let i = 0; i < gameState.aiHand.length; i++) {
+                    if (gameState.aiHand[i].suit === 'clubs') {
+                        playCard('ai', i, 'ai');
+                        played = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Try to play a special card
+            if (!gameState.abilityUsed) {
+                for (let i = 0; i < gameState.aiHand.length; i++) {
+                    if (gameState.aiHand[i].special) {
+                        // For Ace, only swap if AI field has less value than player field
+                        if (gameState.aiHand[i].special === 'swap') {
+                            const aiFieldValue = gameState.aiField.reduce((sum, card) => sum + card.value, 0);
+                            const playerFieldValue = gameState.playerField.reduce((sum, card) => sum + card.value, 0);
+                            
+                            if (aiFieldValue < playerFieldValue) {
+                                playCard('ai', i, 'ai');
+                                played = true;
+                                break;
+                            }
+                        } 
+                        // For Joker, use if player has cards in hand
+                        else if (gameState.aiHand[i].special === 'discard' && gameState.playerHand.length > 0) {
+                            playCard('ai', i, 'ai');
+                            played = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Try to play a diamond (purchase)
+            if (!gameState.abilityUsed) {
+                for (let i = 0; i < gameState.aiHand.length; i++) {
+                    if (gameState.aiHand[i].suit === 'diamonds' && gameState.playerField.length > 0) {
+                        // Check if there's a card AI can purchase
+                        const diamondValue = gameState.aiHand[i].value;
+                        const canPurchase = gameState.playerField.some(card => diamondValue >= card.value);
+                        
+                        if (canPurchase) {
+                            playCard('ai', i, 'player');
+                            played = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Try to play a spade (recovery)
+            if (!gameState.abilityUsed) {
+                for (let i = 0; i < gameState.aiHand.length; i++) {
+                    if (gameState.aiHand[i].suit === 'spades' && gameState.aiGraveyard.length > 0) {
+                        // Check if there's a card AI can recover
+                        const spadeValue = gameState.aiHand[i].value;
+                        const canRecover = gameState.aiGraveyard.some(card => spadeValue >= card.value && card !== gameState.aiHand[i]);
+                        
+                        if (canRecover) {
+                            playCard('ai', i, 'ai');
+                            played = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // End turn
+            setTimeout(endTurn, 1000);
+        }
+
+        // Check win conditions
+        function checkWinCondition() {
+            // Check hit points
+            if (gameState.playerHitPoints >= 21) {
+                endGame('ai');
+                return true;
+            }
+            
+            if (gameState.aiHitPoints >= 21) {
+                endGame('player');
+                return true;
+            }
+            
+            // Check if a player has no cards left
+            if (gameState.playerDeck.length === 0 && gameState.playerHand.length === 0) {
+                endGame('ai');
+                return true;
+            }
+            
+            if (gameState.aiDeck.length === 0 && gameState.aiHand.length === 0) {
+                endGame('player');
+                return true;
+            }
+            
+            return false;
+        }
+
+        // End the game
+        function endGame(winner) {
+            if (winner === 'player') {
+                alert("Congratulations! You win!");
+                addLogMessage("Game over! You win!");
+            } else {
+                alert("Game over! AI wins!");
+                addLogMessage("Game over! AI wins!");
+            }
+            
+            // Disable further interaction
+            document.getElementById("player-deck").removeEventListener("click", playerDrawCard);
+            document.getElementById("end-turn-btn").removeEventListener("click", playerEndTurn);
+            document.getElementById("pass-btn").removeEventListener("click", playerPass);
+            
+            // Disable card clicks
+            const playerHandElement = document.getElementById("player-hand");
+            const cards = playerHandElement.querySelectorAll("img");
+            cards.forEach(card => {
+                card.removeEventListener("click", handlePlayerCardClick);
+                card.style.cursor = "default";
+            });
+            
+            // Add game over class for visual indication
+            document.body.classList.add("game-over");
+        }
+// Update the game user interface to match game state
+function updateGameUI() {
+    // Update deck counters
+    document.getElementById('player-deck-counter').textContent = gameState.playerDeck.length;
+    document.getElementById('ai-deck-counter').textContent = gameState.aiDeck.length;
+    document.getElementById('player-deck-count').textContent = gameState.playerDeck.length;
+    document.getElementById('ai-deck-count').textContent = gameState.aiDeck.length;
+    
+    // Update hit points
+    document.getElementById('player-hp').textContent = gameState.playerHitPoints;
+    document.getElementById('ai-hp').textContent = gameState.aiHitPoints;
+    
+    // Update turn indicator
+    document.getElementById('turn-indicator').textContent = 
+        gameState.currentTurn === 'player' ? 'Your Turn' : 'AI Turn';
+    
+    // Update player hand
+    updateCardContainer('player-hand', gameState.playerHand, true);
+    
+    // Update fields
+    updateCardContainer('player-field', gameState.playerField, false);
+    updateCardContainer('ai-field', gameState.aiField, false);
+    
+    // Update graveyards
+    updateGraveyard('player-graveyard', gameState.playerGraveyard);
+    updateGraveyard('ai-graveyard', gameState.aiGraveyard);
+}
+
+// Update a container of cards (hand or field)
+function updateCardContainer(containerId, cards, isHand) {
+    const container = document.getElementById(containerId);
+    
+    // Keep the section title, remove all other children
+    while (container.children.length > 1) {
+        container.removeChild(container.lastChild);
+    }
+    
+    // Add cards
+    cards.forEach(card => {
+        const cardImg = document.createElement('img');
+        cardImg.src = card.img;
+        
+        if (isHand) {
+            cardImg.classList.add('hand-card');
+            // Add click event for hand cards
+            cardImg.addEventListener('click', handlePlayerCardClick);
+        } else {
+            cardImg.classList.add('field-card');
+        }
+        
+        container.appendChild(cardImg);
+    });
+}
+
+// Update graveyard with top card
+function updateGraveyard(graveyardId, cards) {
+    const graveyard = document.getElementById(graveyardId);
+    
+    // Keep the section title, remove all other children
+    while (graveyard.children.length > 1) {
+        graveyard.removeChild(graveyard.lastChild);
+    }
+    
+    // Add top card if available
+    if (cards.length > 0) {
+        const topCard = cards[cards.length - 1];
+        const cardImg = document.createElement('img');
+        cardImg.src = topCard.img;
+        cardImg.classList.add('graveyard-card');
+        graveyard.appendChild(cardImg);
+    }
+    
+    // Add counter if there's more than one card
+    if (cards.length > 1) {
+        const counter = document.createElement('div');
+        counter.className = 'counter';
+        counter.textContent = cards.length;
+        graveyard.appendChild(counter);
+    }
+}
+
+// Add message to game log
+function addLogMessage(message) {
+    const gameLog = document.getElementById('game-log');
+    const logEntry = document.createElement('div');
+    logEntry.textContent = message;
+    gameLog.appendChild(logEntry);
+    
+    // Auto-scroll to bottom
+    gameLog.scrollTop = gameLog.scrollHeight;
+}
+
+// Set up event listeners for game elements
+function setupEventListeners() {
+    // Deck click event
+    document.getElementById("player-deck").addEventListener("click", playerDrawCard);
+    
+    // End turn button
+    document.getElementById("end-turn-btn").addEventListener("click", playerEndTurn);
+    
+    // Pass button
+    document.getElementById("pass-btn").addEventListener("click", playerPass);
+}
+
+// Player draws a card when clicking their deck
+function playerDrawCard() {
+    // Check if it's player's turn
+    if (gameState.currentTurn !== 'player') {
+        addLogMessage("It's not your turn!");
+        return;
+    }
+    
+    // Try to draw a card
+    const card = drawCardToHand('player');
+    
+    if (card) {
+        addLogMessage(`You drew a card: ${getCardName(card)}`);
+        updateGameUI();
+    }
+}
+
+// Player ends their turn
+function playerEndTurn() {
+    if (gameState.currentTurn === 'player') {
+        endTurn();
+    } else {
+        addLogMessage("It's not your turn!");
+    }
+}
+
+// Player passes their turn
+function playerPass() {
+    if (gameState.currentTurn === 'player') {
+        addLogMessage("You passed your turn.");
+        endTurn();
+    } else {
+        addLogMessage("It's not your turn!");
+    }
+}
+
+// Helper function to get readable card name
+function getCardName(card) {
+    let valueName = card.value;
+    if (card.value === 11) valueName = "Jack";
+    else if (card.value === 12) valueName = "Queen";
+    else if (card.value === 13) valueName = "King";
+    else if (card.value === 14) valueName = "Ace";
+    else if (card.value === 15) valueName = "Joker";
+    
+    return `${valueName} of ${card.suit.charAt(0).toUpperCase() + card.suit.slice(1)}`;
+}
+
+// Handle player card click
+function handlePlayerCardClick(event) {
+    // Find which card was clicked
+    const cardElement = event.target;
+    const cardIndex = Array.from(cardElement.parentNode.children).indexOf(cardElement) - 1; // -1 to account for the section title
+    
+    if (cardIndex < 0 || cardIndex >= gameState.playerHand.length) {
+        return; // Invalid index
+    }
+    
+    const card = gameState.playerHand[cardIndex];
+    
+    // Different handling based on card suit
+    if (card.suit === 'hearts' || card.suit === 'clubs') {
+        // Attack or defense cards go to player field
+        if (playCard('player', cardIndex, 'player')) {
+            addLogMessage(`You played ${getCardName(card)}`);
+        }
+    } 
+    else if (card.suit === 'diamonds') {
+        // Check if there are cards to purchase
+        if (gameState.aiField.length === 0) {
+            addLogMessage("No cards to purchase!");
+            return;
+        }
+        
+        // Show targeting overlay on opponent field
+        showTargetOverlay('ai-field', card, (targetIndex) => {
+            if (targetIndex !== null) {
+                // Check if card can be purchased
+                const targetCard = gameState.aiField[targetIndex];
+                if (card.value >= targetCard.value) {
+                    // Remove diamond from hand and add to graveyard
+                    gameState.playerHand.splice(cardIndex, 1);
+                    gameState.playerGraveyard.push(card);
+                    
+                    // Move purchased card to player hand
+                    const purchasedCard = gameState.aiField.splice(targetIndex, 1)[0];
+                    gameState.playerHand.push(purchasedCard);
+                    
+                    addLogMessage(`You used ${getCardName(card)} to purchase ${getCardName(purchasedCard)}`);
+                    gameState.abilityUsed = true;
+                    updateGameUI();
+                } else {
+                    addLogMessage(`Your ${getCardName(card)} isn't valuable enough to purchase ${getCardName(targetCard)}`);
+                }
+            }
+        });
+        return; // Don't proceed further until purchase is resolved
+    }
+    else if (card.suit === 'spades') {
+        // Check if there are cards to recover
+        if (gameState.playerGraveyard.length === 0) {
+            addLogMessage("No cards to recover!");
+            return;
+        }
+        
+        // Show targeting overlay on player's graveyard
+        showTargetOverlay('player-graveyard', card, (targetIndex) => {
+            if (targetIndex !== null && targetIndex < gameState.playerGraveyard.length) {
+                // Check if card can be recovered
+                const targetCard = gameState.playerGraveyard[targetIndex];
+                if (card.value >= targetCard.value) {
+                    // Remove spade from hand and add to graveyard
+                    gameState.playerHand.splice(cardIndex, 1);
+                    gameState.playerGraveyard.push(card);
+                    
+                    // Move recovered card to player hand
+                    const recoveredCard = gameState.playerGraveyard.splice(targetIndex, 1)[0];
+                    gameState.playerHand.push(recoveredCard);
+                    
+                    addLogMessage(`You used ${getCardName(card)} to recover ${getCardName(recoveredCard)}`);
+                    gameState.abilityUsed = true;
+                    updateGameUI();
+                } else {
+                    addLogMessage(`Your ${getCardName(card)} isn't valuable enough to recover ${getCardName(targetCard)}`);
+                }
+            }
+        });
+        return; // Don't proceed further until recovery is resolved
+    }
+    else if (card.special) {
+        // Special cards (Ace, Joker)
+        if (playCard('player', cardIndex, 'player')) {
+            addLogMessage(`You played ${getCardName(card)}`);
+        }
+    }
+    
+    updateGameUI();
+}
+
+// Show targeting overlay for card interactions
+function showTargetOverlay(containerId, sourceCard, callback) {
+    const container = document.getElementById(containerId);
+    const cards = container.querySelectorAll('.field-card, .graveyard-card');
+    
+    // Create overlays for each card
+    cards.forEach((card, index) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'target-overlay';
+        overlay.style.width = card.offsetWidth + 'px';
+        overlay.style.height = card.offsetHeight + 'px';
+        overlay.style.left = card.offsetLeft + 'px';
+        overlay.style.top = card.offsetTop + 'px';
+        
+        overlay.addEventListener('click', () => {
+            // Remove all overlays
+            document.querySelectorAll('.target-overlay').forEach(o => o.remove());
+            callback(index);
+        });
+        
+        container.appendChild(overlay);
+    });
+    
+    // Add a cancel option
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.position = 'absolute';
+    cancelButton.style.bottom = '-30px';
+    cancelButton.style.left = '50%';
+    cancelButton.style.transform = 'translateX(-50%)';
+    
+    cancelButton.addEventListener('click', () => {
+        // Remove all overlays and cancel button
+        document.querySelectorAll('.target-overlay').forEach(o => o.remove());
+        cancelButton.remove();
+        callback(null);
+    });
+    
+    container.appendChild(cancelButton);
+}
+
+// Start the game when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initGame();
+});
+</script>
+</body>
+</html>
